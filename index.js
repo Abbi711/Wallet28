@@ -81,7 +81,8 @@ const networkStatus = function() {
 
 //function to send transact ethers
 const transact = function() {
-
+   console.log("Hello");
+   choiceFunction();
 }
 
 
