@@ -1,4 +1,4 @@
- require('dotenv').config();
+require('dotenv').config();
 const Web3= require('web3');
 const prompt = require('prompt-sync')({sigint: true});
 
@@ -81,7 +81,7 @@ const networkStatus = function() {
 
 //function to send transact ethers
 const transact = function() {
-   console.log("Hello");
+   console.log("Hello Mate");
    choiceFunction();
 }
 
