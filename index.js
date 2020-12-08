@@ -1,5 +1,6 @@
 require('dotenv').config();
 const Web3= require('web3');
+//var Tx = require('ethereumjs-tx');
 const prompt = require('prompt-sync')({sigint: true});
 
 const PROJECT_ID = process.env.PROJECT_ID
@@ -82,7 +83,33 @@ const networkStatus = function() {
 //function to send transact ethers
 const transact = function() {
    console.log("Hello Mate");
-   choiceFunction();
+   let from11 = prompt("Enter From Address ");
+   let to11 = prompt("Enter To Address ");
+   let value11 = Number(prompt("Enter Amount in weis "));
+  // let data11 = `${value11} Ethers sent to ${to11}`;
+  
+/*
+    const txnObject = {
+        from: from11,
+        to:       to11,
+        value:    value11,
+        gasLimit: web3.utils.toHex(21000),
+        gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
+        data: data11
+   } */
+   //const txn = new Tx(txnObject);
+   web3.eth.sendTransaction({from: from11, to:to11, value: Number(value11), gasLimit: 21000, gasPrice: 20000000000})
+   .then(function(res){
+       console.log(res);
+       choiceFunction();
+       })
+   /*
+   txn.sign(privateKey);
+   var serializedTxn = txn.serialize();
+   web3.eth.sendSignedTransaction('0x' + serializedTxn.toString('hex'))
+.on('receipt', function(res) {console.log(res); choiceFunction();})
+.catch(console.log("Transaction failed")); */
+    
 }
 
 
