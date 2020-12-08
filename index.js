@@ -7,9 +7,10 @@ const prompt = require('prompt-sync')({sigint: true});
 const PROJECT_ID = process.env.PROJECT_ID
 let wallet;
 //Choose type of network to connect
-const network = prompt('Choose Network type (Enter 1/2/3) : 1. Mainnet 2. Ropsten 3. Rinkeby ')
-const chooseNetwork = function(number) {    
-    switch(Number(number))
+
+const chooseNetwork = function() {   
+    const network = prompt('Choose Network type (Enter 1/2/3) : 1. Mainnet 2. Ropsten 3. Rinkeby ') 
+    switch(Number(network))
     {
        case 1:
            return "mainnet";
@@ -17,11 +18,14 @@ const chooseNetwork = function(number) {
             return "ropsten";
         case 3:
             return "rinkeby";
+        default:
+            console.log("Choose valid network");
+            chooseNetwork();
     }
 }
 
 //Connect to network 
-const networkName = chooseNetwork(network);
+const networkName = chooseNetwork();
 const web3= new Web3( new Web3.providers.HttpProvider(`https://${networkName}.infura.io/v3/${PROJECT_ID}`));
 
 
@@ -44,8 +48,7 @@ const writeFile = function(array){
 
 
 //Function to check balance
-const checkBalance = function() {    
-    let index = Number(prompt("Enter index of account in wallet "));
+const checkBalance = function(index) {   
 
     web3.eth.getBalance(web3.eth.accounts.wallet[index].address)
     .then(function(res){
@@ -75,16 +78,23 @@ const networkStatus = function() {
 
 //function to send transact ethers
 const transact = function() {
-   console.log("Hello Mate");
-   let from11 = prompt("Enter From Address ");
+   let from11 = Number(prompt("Enter From Account Index "));
    let to11 = prompt("Enter To Address ");
-   let value11 = Number(prompt("Enter Amount in weis "));
-
-   web3.eth.sendTransaction({from: from11, to:to11, value: Number(value11), gasLimit: 21000, gasPrice: 20000000000})
+   let value11 = Number(prompt("Enter Amount in weis "));   
+   if(web3.eth.accounts.wallet[from11]) {
+   web3.eth.sendTransaction({from: web3.eth.accounts.wallet[from11].address, to:to11, value: Number(value11), gasLimit: 21000, gasPrice: 20000000000})
    .then(function(res){
        console.log(res);
        choiceFunction();
        })
+       
+   .catch(function(err){
+       console.log(err);
+       choiceFunction(); 
+   })
+      }
+   else{console.log("Enter valid Account index");
+        choiceFunction();}
   
 }
 
@@ -98,12 +108,13 @@ const displayWallet = function(){
 
 //Choose action
 const choiceFunction = function() { 
-    
+    let index;
     const choice = prompt('Choose action : 1. Check Balance 2. Transact 3. Check Network Status 4. View Wallet 5. Exit ')   
        switch(Number(choice))
        {
           case 1:
-               checkBalance();
+               index = Number(prompt("Enter index of account in wallet "));
+               checkBalance(index);
                break;
            case 2:
                transact();
@@ -116,20 +127,12 @@ const choiceFunction = function() {
                break;
            case 5:
                process.exit();
+               break;
+            default:
+                console.log("Choose valid option ");
+                choiceFunction();
        }
    }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 //Choose to create or import account
@@ -149,6 +152,9 @@ const accountCreation = function() {
                pkey= prompt("Enter private key ")
                acc = web3.eth.accounts.privateKeyToAccount(pkey);
                return web3.eth.accounts.wallet.add(acc);
+           default:
+               console.log("Choose valid option ");
+               accountCreation();
         }
     }
     chooseAccount(accountType);
@@ -157,30 +163,32 @@ const accountCreation = function() {
     }while(Number(continued)==1)
       
     }
-    
+
 
 const createWallet =  function() {
     wallet = web3.eth.accounts.wallet.create();
     const userName = prompt("Enter Username ");
-    accountCreation();
     const pwd = prompt("Enter password to encrypt wallet ");
+    accountCreation();
+    
     const keystore = web3.eth.accounts.wallet.encrypt(pwd);
     readFile().then(function(data) {
                 var array = JSON.parse(data);
                 const data1 = {'UserName' : userName,
                                'Keystore' : keystore };
                 array.wallets.push(data1);
-                console.log(array);
-                console.log(array.wallets.length);
+                //console.log(array);
+                //console.log(array.wallets.length);
                 writeFile(array).then(function(){
-                 console.log('Done!')
-                 console.log(array.wallets.length)
+                 console.log('Wallet created ! ');
+                 //console.log(array.wallets.length)
                  choiceFunction();
                 })
  });
  }
 
  const importWallet = function() {
+     let found =0;
     const userName = prompt('Enter UserName ');
     const passWord = prompt('Enter Password ');
     readFile().then(function(data) {
@@ -190,16 +198,22 @@ const createWallet =  function() {
             {
                 const keystore = array.wallets[i].Keystore;
                 console.log(keystore);
-                wallet = web3.eth.accounts.wallet.decrypt(keystore,passWord); 
-                console.log(wallet);           }
+                wallet = web3.eth.accounts.wallet.decrypt(keystore,passWord);   
+                console.log(wallet);  found =1;   
+                choiceFunction();
+                
+            }
         }
-        accountCreation();
-        choiceFunction();
-     } )
+        if(found == 0) { 
+            console.log("Invalid UserName !");
+        walletSelection();}
+        
+    } )
     }
 
 //Create or import wallet
 const walletSelection = function() {
+    console.log("Set Wallet: ")
     const choose = prompt("1. Create new wallet 2. Sign in to wallet ");
     switch(Number(choose)){
         case 1:
@@ -207,50 +221,10 @@ const walletSelection = function() {
             break;
         case 2:
             importWallet();
-            break;    
+            break; 
+        default:
+            console.log("Choose valid option ");
+            walletSelection();   
     }
 }
 walletSelection();
-
-   
- 
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-const aaccountAddress = web3.eth.accounts.wallet[1].address;
-web3.eth.getBalance(aaccountAddress).then(console.log);
-
-const aaccountAddress1 = web3.eth.accounts.wallet[0].address;
-web3.eth.getBalance(aaccountAddress1).then(console.log);
-*/
-
-
-
-//web3.eth.accounts.wallet.save("hello");
-
-/*
-const account1 = web3.eth.accounts.wallet.add(ADDRESS1);
-console.log(account1); */
-//const account2 = web3.eth.accounts.wallet.add(ADDRESS2);
-/*console.log(account2);
-web3.eth.getBalance(account1.address).then(console.log);
-web3.eth.getBalance(account2.address).then(console.log);   
-const account3 = web3.eth.accounts.create();
-web3.eth.accounts.wallet.add(account2);
-web3.eth.accounts.wallet.add(account3);
-//console.log(wallet);
-//web3.eth.accounts.wallet.remove(account2);
-//web3.eth.accounts.wallet.clear();
-console.log(wallet); */
