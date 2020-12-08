@@ -1,10 +1,11 @@
 require('dotenv').config();
 const Web3= require('web3');
+const fs = require('fs');
 //var Tx = require('ethereumjs-tx');
 const prompt = require('prompt-sync')({sigint: true});
 
 const PROJECT_ID = process.env.PROJECT_ID
-
+let wallet;
 //Choose type of network to connect
 const network = prompt('Choose Network type (Enter 1/2/3) : 1. Mainnet 2. Ropsten 3. Rinkeby ')
 const chooseNetwork = function(number) {    
@@ -23,31 +24,23 @@ const chooseNetwork = function(number) {
 const networkName = chooseNetwork(network);
 const web3= new Web3( new Web3.providers.HttpProvider(`https://${networkName}.infura.io/v3/${PROJECT_ID}`));
 
-//Create wallet
-const wallet = web3.eth.accounts.wallet.create();
 
-//Choose to create or import account
-let continued;
-do{
-const accountType = prompt('Choose (1/2) : 1. Create a new account 2. Import an account ') 
-let account11, pkey,acc;
-const chooseAccount = function(number) {    
-    switch(Number(number))
-    {
-       case 1:
-           account11= web3.eth.accounts.create();
-           console.log(account11);
-           return web3.eth.accounts.wallet.add(account11);
-       case 2:
-           pkey= prompt("Enter private key ")
-           acc = web3.eth.accounts.privateKeyToAccount(pkey);
-           return web3.eth.accounts.wallet.add(acc);
-    }
+const readFile = function(){
+    return new Promise(function(resolve,reject){
+       fs.readFile('./wallets.json', 'utf-8', function(err, data) {
+           err ? reject(err) : resolve(data)
+       })
+    })
 }
-chooseAccount(accountType);
 
-continued = prompt("Choose 1. Import/Create new account 2. Continue ");
-}while(Number(continued)==1)
+const writeFile = function(array){
+    return new Promise(function(resolve,reject){
+        fs.writeFile('./wallets.json', JSON.stringify(array), 'utf-8', function(err,data) {
+           err ? reject(err) : resolve(data)
+       })
+    })
+}
+
 
 
 //Function to check balance
@@ -86,30 +79,13 @@ const transact = function() {
    let from11 = prompt("Enter From Address ");
    let to11 = prompt("Enter To Address ");
    let value11 = Number(prompt("Enter Amount in weis "));
-  // let data11 = `${value11} Ethers sent to ${to11}`;
-  
-/*
-    const txnObject = {
-        from: from11,
-        to:       to11,
-        value:    value11,
-        gasLimit: web3.utils.toHex(21000),
-        gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
-        data: data11
-   } */
-   //const txn = new Tx(txnObject);
+
    web3.eth.sendTransaction({from: from11, to:to11, value: Number(value11), gasLimit: 21000, gasPrice: 20000000000})
    .then(function(res){
        console.log(res);
        choiceFunction();
        })
-   /*
-   txn.sign(privateKey);
-   var serializedTxn = txn.serialize();
-   web3.eth.sendSignedTransaction('0x' + serializedTxn.toString('hex'))
-.on('receipt', function(res) {console.log(res); choiceFunction();})
-.catch(console.log("Transaction failed")); */
-    
+  
 }
 
 
@@ -142,10 +118,103 @@ const choiceFunction = function() {
                process.exit();
        }
    }
-   
-choiceFunction();   
-   
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Choose to create or import account
+const accountCreation = function() {
+    let continued;
+    do{
+    const accountType = prompt('Choose (1/2) : 1. Create a new account 2. Import an account '); 
+    let account11, pkey,acc;
+    const chooseAccount = function(number) {    
+        switch(Number(number))
+        {
+           case 1:
+               account11= web3.eth.accounts.create();
+               console.log(account11);
+               return web3.eth.accounts.wallet.add(account11);
+           case 2:
+               pkey= prompt("Enter private key ")
+               acc = web3.eth.accounts.privateKeyToAccount(pkey);
+               return web3.eth.accounts.wallet.add(acc);
+        }
+    }
+    chooseAccount(accountType);
+    
+    continued = prompt("Choose 1. Add another account 2. Continue ");
+    }while(Number(continued)==1)
+      
+    }
+    
+
+const createWallet =  function() {
+    wallet = web3.eth.accounts.wallet.create();
+    const userName = prompt("Enter Username ");
+    accountCreation();
+    const pwd = prompt("Enter password to encrypt wallet ");
+    const keystore = web3.eth.accounts.wallet.encrypt(pwd);
+    readFile().then(function(data) {
+                var array = JSON.parse(data);
+                const data1 = {'UserName' : userName,
+                               'Keystore' : keystore };
+                array.wallets.push(data1);
+                console.log(array);
+                console.log(array.wallets.length);
+                writeFile(array).then(function(){
+                 console.log('Done!')
+                 console.log(array.wallets.length)
+                 choiceFunction();
+                })
+ });
+ }
+
+ const importWallet = function() {
+    const userName = prompt('Enter UserName ');
+    const passWord = prompt('Enter Password ');
+    readFile().then(function(data) {
+        var array = JSON.parse(data);
+        for(let i=0; i<array.wallets.length; i++){
+            if(array.wallets[i].UserName == userName) 
+            {
+                const keystore = array.wallets[i].Keystore;
+                console.log(keystore);
+                wallet = web3.eth.accounts.wallet.decrypt(keystore,passWord); 
+                console.log(wallet);           }
+        }
+        accountCreation();
+        choiceFunction();
+     } )
+    }
+
+//Create or import wallet
+const walletSelection = function() {
+    const choose = prompt("1. Create new wallet 2. Sign in to wallet ");
+    switch(Number(choose)){
+        case 1:
+            createWallet();
+            break;
+        case 2:
+            importWallet();
+            break;    
+    }
+}
+walletSelection();
+
+   
+ 
+   
 
 
 
