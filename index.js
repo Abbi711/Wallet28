@@ -6,28 +6,7 @@ const prompt = require('prompt-sync')({sigint: true});
 
 const PROJECT_ID = process.env.PROJECT_ID
 let wallet;
-//Choose type of network to connect
-
-const chooseNetwork = function() {   
-    const network = prompt('Choose Network type (Enter 1/2/3) : 1. Mainnet 2. Ropsten 3. Rinkeby ') 
-    switch(Number(network))
-    {
-       case 1:
-           return "mainnet";
-        case 2:
-            return "ropsten";
-        case 3:
-            return "rinkeby";
-        default:
-            console.log("Choose valid network");
-            chooseNetwork();
-    }
-}
-
-//Connect to network 
-const networkName = chooseNetwork();
-const web3= new Web3( new Web3.providers.HttpProvider(`https://${networkName}.infura.io/v3/${PROJECT_ID}`));
-
+let web3;
 
 const readFile = function(){
     return new Promise(function(resolve,reject){
@@ -45,8 +24,6 @@ const writeFile = function(array){
     })
 }
 
-
-
 //Function to check balance
 const checkBalance = function(index) {   
 
@@ -61,8 +38,7 @@ const checkBalance = function(index) {
     });
  }
 
-
- //function to check network status
+//function to check network status
 const networkStatus = function() {    
     web3.eth.net.getNetworkType()
          .then(function(res){
@@ -78,26 +54,23 @@ const networkStatus = function() {
 
 //function to send transact ethers
 const transact = function() {
-   let from11 = Number(prompt("Enter From Account Index "));
-   let to11 = prompt("Enter To Address ");
-   let value11 = Number(prompt("Enter Amount in weis "));   
+   let from11 = Number(prompt("Enter From Account Index: "));
+   let to11 = prompt("Enter To Address: ");
+   let value11 = Number(prompt("Enter Amount in Weis: "));   
    if(web3.eth.accounts.wallet[from11]) {
    web3.eth.sendTransaction({from: web3.eth.accounts.wallet[from11].address, to:to11, value: Number(value11), gasLimit: 21000, gasPrice: 20000000000})
    .then(function(res){
        console.log(res);
        choiceFunction();
        })
-       
    .catch(function(err){
        console.log(err);
        choiceFunction(); 
    })
       }
    else{console.log("Enter valid Account index");
-        choiceFunction();}
-  
+        choiceFunction(); }
 }
-
 
 //function to display wallet
 const displayWallet = function(){
@@ -105,35 +78,30 @@ const displayWallet = function(){
        choiceFunction();
 }
 
-
 //Choose action
 const choiceFunction = function() { 
     let index;
-    const choice = prompt('Choose action : 1. Check Balance 2. Transact 3. Check Network Status 4. View Wallet 5. Exit ')   
+    const choice = prompt('Choose action : 1. Check Balance 2. Transact 3. Check Network Status 4. View Wallet 5. Change Network 6. Exit ')   
        switch(Number(choice))
        {
           case 1:
                index = Number(prompt("Enter index of account in wallet "));
-               checkBalance(index);
-               break;
+               checkBalance(index); break;
            case 2:
-               transact();
-               break;
+               transact(); break;
            case 3:
-               networkStatus();
-               break;
+               networkStatus(); break;
            case 4:
-               displayWallet();
-               break;
+               displayWallet(); break;
            case 5:
-               process.exit();
-               break;
+                chooseNetwork(); break;
+           case 6:
+               process.exit(); break;
             default:
                 console.log("Choose valid option ");
                 choiceFunction();
        }
    }
-
 
 //Choose to create or import account
 const accountCreation = function() {
@@ -157,11 +125,9 @@ const accountCreation = function() {
                accountCreation();
         }
     }
-    chooseAccount(accountType);
-    
+    chooseAccount(accountType);    
     continued = prompt("Choose 1. Add another account 2. Continue ");
-    }while(Number(continued)==1)
-      
+    } while(Number(continued)==1)
     }
 
 
@@ -177,20 +143,17 @@ const createWallet =  function() {
                 const data1 = {'UserName' : userName,
                                'Keystore' : keystore };
                 array.wallets.push(data1);
-                //console.log(array);
-                //console.log(array.wallets.length);
                 writeFile(array).then(function(){
                  console.log('Wallet created ! ');
-                 //console.log(array.wallets.length)
                  choiceFunction();
                 })
  });
  }
 
  const importWallet = function() {
-     let found =0;
-    const userName = prompt('Enter UserName ');
-    const passWord = prompt('Enter Password ');
+    let found =0;
+    const userName = prompt('Enter UserName: ');
+    const passWord = prompt('Enter Password: ');
     readFile().then(function(data) {
         var array = JSON.parse(data);
         for(let i=0; i<array.wallets.length; i++){
@@ -199,7 +162,7 @@ const createWallet =  function() {
                 const keystore = array.wallets[i].Keystore;
                 console.log(keystore);
                 wallet = web3.eth.accounts.wallet.decrypt(keystore,passWord);   
-                console.log(wallet);  found =1;   
+                console.log(wallet); found =1;   
                 choiceFunction();
                 
             }
@@ -211,20 +174,42 @@ const createWallet =  function() {
     } )
     }
 
+
 //Create or import wallet
 const walletSelection = function() {
     console.log("Set Wallet: ")
     const choose = prompt("1. Create new wallet 2. Sign in to wallet ");
     switch(Number(choose)){
         case 1:
-            createWallet();
-            break;
+            createWallet(); break;
         case 2:
-            importWallet();
-            break; 
+            importWallet(); break; 
         default:
             console.log("Choose valid option ");
             walletSelection();   
     }
 }
-walletSelection();
+
+//Choose type of network to connect
+const chooseNetwork = function() {   
+    const network = prompt('Choose Network type (Enter 1/2/3) : 1. Mainnet 2. Ropsten 3. Rinkeby ') 
+    let networkName;
+    switch(Number(network))
+    {
+       case 1:
+           networkName = "mainnet"; break;
+        case 2:
+            networkName = "ropsten"; break;
+        case 3:
+            networkName = "rinkeby"; break;
+        default:
+            console.log("Choose valid network");
+            chooseNetwork();
+
+    }
+    web3= new Web3( new Web3.providers.HttpProvider(`https://${networkName}.infura.io/v3/${PROJECT_ID}`));
+    
+}
+
+//Connect to network 
+chooseNetwork();
