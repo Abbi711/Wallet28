@@ -15,6 +15,7 @@ async function readFile(name){
     })
 }
 
+
 async function writeFile(array, name){
     return new Promise(function(resolve,reject){
         fs.writeFile(`./${name}.json`, JSON.stringify(array), 'utf-8', function(err,data) {
