@@ -7,17 +7,17 @@ const PROJECT_ID = process.env.PROJECT_ID
 let wallet;
 let web3;
 
-async function readFile(){
+async function readFile(name){
     return new Promise(function(resolve,reject){
-       fs.readFile('./wallets.json', 'utf-8', function(err, data) {
+       fs.readFile(`./${name}.json`, 'utf-8', function(err, data) {
            err ? reject(err) : resolve(data)
        })
     })
 }
 
-async function writeFile(array){
+async function writeFile(array, name){
     return new Promise(function(resolve,reject){
-        fs.writeFile('./wallets.json', JSON.stringify(array), 'utf-8', function(err,data) {
+        fs.writeFile(`./${name}.json`, JSON.stringify(array), 'utf-8', function(err,data) {
            err ? reject(err) : resolve(data)
        })
     })
@@ -26,19 +26,14 @@ async function writeFile(array){
 //Function to check balance
 async function checkBalance(index) {   
    if(web3.eth.accounts.wallet[index.value]){
-    web3.eth.getBalance(web3.eth.accounts.wallet[index.value].address)
+    await web3.eth.getBalance(web3.eth.accounts.wallet[index.value].address)
     .then(function(res){
-        console.log(res);
-        choiceFunction();
-    })
+        console.log(res);})
     .catch(function(err){
-        console.log(err);
-        choiceFunction();
-    });}
+        console.log(err);});}
     else{
-        console.log("Invalid Index number ");
+        console.log("Invalid Index number ");}
         choiceFunction();
-    }
  }
 
 //Check status of network
@@ -55,18 +50,15 @@ async function transact(){
     const from11 = await prompts({
         type: 'number',
         name: 'value',
-        message: 'Enter From Account Index: ',
-      });
+        message: 'Enter From Account Index: ',});
     const to11 = await prompts({
         type: 'text',
         name: 'value',
-        message: 'Enter To Account Address: ',
-      });
+        message: 'Enter To Account Address: ',});
     const value11 = await prompts({
         type: 'number',
         name: 'value',
-        message: 'Enter Amount in Weis: ',
-      });
+        message: 'Enter Amount in Weis: ',});
       if(web3.eth.accounts.wallet[from11.value]) {
         let account = web3.eth.accounts.wallet[from11.value];  
         let txnObjext = {
@@ -77,7 +69,7 @@ async function transact(){
             gasPrice: 20000000000
          }; let txn;
         await web3.eth.accounts.signTransaction(txnObjext,account.privateKey)
-         .then(txn1 => { txn =txn1})
+         .then(txn1 => { txn =txn1 })
          .catch(err => {console.log(err); choiceFunction()})
          await web3.eth.sendSignedTransaction(txn.rawTransaction)
            .then(Receipt => console.log(`Amount Transferred ! Txn Hash: ${Receipt.transactionHash}`) )
@@ -133,7 +125,7 @@ async function accountCreation() {
             type: 'number',
             name: 'value',
             message: 'Choose (1/2) : 1. Create a new account 2. Import an account ',
-            validate: value => value==1 || value==2 ? true : 'Choose valid option '
+            validate: value => value>0 && value<=2 ? true : 'Choose valid option '
           });
     let account11, pkey,acc;
     switch(Number(accountType.value))
@@ -146,8 +138,7 @@ async function accountCreation() {
               pkey = await prompts({
                 type: 'password',
                 name: 'value',
-                message: 'Enter Private key ',
-              }); 
+                message: 'Enter Private key ',}); 
                acc = web3.eth.accounts.privateKeyToAccount(pkey.value);
                web3.eth.accounts.wallet.add(acc); break;
         }   
@@ -155,11 +146,23 @@ async function accountCreation() {
             type: 'number',
             name: 'value',
             message: 'Choose 1. Add another account 2. Continue ',
-            validate: value => value==1 || value==2 ? true : 'Choose valid option '
-          });
+            validate: value => value==1 || value==2 ? true : 'Choose valid option '});
     } while(continued.value==1)
     }
 
+async function updateFile(userName, keystore){
+    const data1 = {'UserName' : userName,
+    'Keystore' : keystore };
+     writeFile(data1,userName).then(console.log('Wallet created ! '));
+    
+}
+
+//check if username is already takem
+async function checkName1(userName){
+    if(fs.existsSync(`./${userName}.json`))
+        return false;
+    return true;
+}
 
 //Create a new wallet and add accounts
 async function createWallet() {
@@ -167,31 +170,44 @@ async function createWallet() {
     const userName = await prompts({
         type: 'text',
         name: 'value',
-        message: 'Enter UserName: ',
-      }); 
+        message: 'Enter UserName: ',}); 
+      let check = await checkName1(userName.value)
+      if(check){
       const pwd = await prompts({
         type: 'password',
         name: 'value',
-        message: 'Enter Password: ',
-      }); 
+        message: 'Enter Password: ',}); 
     await accountCreation();
     
     const keystore = web3.eth.accounts.wallet.encrypt(pwd.value);
-    readFile().then(function(data) {
-                var array = JSON.parse(data);
-                const data1 = {'UserName' : userName.value,
-                               'Keystore' : keystore };
-                array.wallets.push(data1);
-                writeFile(array).then(function(){
-                 console.log('Wallet created ! ');
-                 choiceFunction();
-                })
- });
- }
+    await updateFile(userName.value, keystore)
+    choiceFunction(); }
+    else{console.log("Username already Taken "); createWallet();}
+  }
+
+//Add account to existing wallet
+async function modifyWallet(userName,pwd){
+    let keystore;
+    const modify = await prompts({
+        type: 'number',
+        name: 'value',
+        message: '1. Add a new account 2. Continue ',
+        validate: value => value == 1 || value ==2 ? true : 'Choose valid option ' }); 
+         
+    switch(modify.value){
+        case 1:
+            await accountCreation();
+            keystore = web3.eth.accounts.wallet.encrypt(pwd);
+            await updateFile(userName, keystore)
+            break;
+        case 2:
+            break;    
+    }     
+    choiceFunction();
+}
 
  //Import existing wallet with password
 async function importWallet(){
-    let found =0;
     const userName = await prompts({
         type: 'text',
         name: 'value',
@@ -203,23 +219,16 @@ async function importWallet(){
         message: 'Enter Password: ',
       }); 
        
-    readFile().then(function(data) {
-        var array = JSON.parse(data);
-        for(let i=0; i<array.wallets.length; i++){
-            if(array.wallets[i].UserName == userName.value) 
-            {
-                const keystore = array.wallets[i].Keystore;
-                console.log(keystore);
+    readFile(userName.value)
+        .then(function(data) {
+        var data1 = JSON.parse(data);
+                const keystore = data1.Keystore;
                 wallet = web3.eth.accounts.wallet.decrypt(keystore,password.value);   
-                console.log(wallet); found =1;   
-                choiceFunction();
-            }
-        }
-        if(found == 0) { 
-            console.log("Invalid UserName !");
-        walletSelection();}
-        
-    })
+                console.log(wallet);   
+                modifyWallet(userName.value,password.value);})
+        .catch(function() { 
+            console.log("Invalid Credentials !");
+             walletSelection();})
     }
 
 
@@ -242,21 +251,18 @@ async function walletSelection() {
 }
 
 //Choose type of network to connect
-
 async function chooseNetwork() {
         const network = await prompts({
           type: 'number',
           name: 'value',
           message: 'Choose Network type (Enter 1/2/3) : 1. Mainnet 2. Ropsten 3. Rinkeby ',
-          validate: value => value==1 || value==2 || value==3 ? true : 'Choose valid option '
+          validate: value => value>0 && value<=3 ? true : 'Choose valid option '
         }); 
     let networkName;
     switch(Number(network.value))
     {
        case 1: 
-           console.log("fr")
-            networkName = "mainnet";
-            break;
+            networkName = "mainnet"; break;
         case 2:
             networkName = "ropsten"; break;
         case 3:
@@ -269,8 +275,3 @@ async function chooseNetwork() {
 
 //Connect to network 
 chooseNetwork();
-
-
-//let txn = await web3.eth.accounts.signTransaction(txnObjext,account.privateKey);
-        //const Receipt = await web3.eth.sendSignedTransaction(txn.rawTransaction);
-         //console.log(`Amount Transferred ! Txn Hash: ${Receipt.transactionHash}`);
