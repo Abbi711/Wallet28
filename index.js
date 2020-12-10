@@ -106,6 +106,7 @@ const displayWallet = function(){
        console.log(wallet);
 }
 
+
 //Choose wallet action
 async function choiceFunction() { 
     const choice = await prompts({
